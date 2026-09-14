@@ -7,6 +7,10 @@ var request struct {
 }
 
 type URLStore struct {
-	mu   sync.RWMutex      // mutex to protect the map from concurrent access (like a lock)
+	mu   sync.Mutex        // mutex to protect the map from concurrent access (like a lock)
 	urls map[string]string // map to store the shortened URLs and their corresponding original URLs
+}
+type ShortenResponse struct {
+	ShortCode string `json:"short_code"`
+	ShortURL  string `json:"short_url"`
 }

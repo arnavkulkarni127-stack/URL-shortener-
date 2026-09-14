@@ -17,10 +17,27 @@ func shortenHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
+	generatedCode, err := store.ShortenRequest(request.URL) // generate a unique short code for the URL
+	if err != nil {
+		http.Error(w, "Failed to generate short code", http.StatusInternalServerError)
+		return
+	}
+	response := ShortenResponse{
+		ShortCode: generatedCode,
+		ShortURL:  fmt.Sprintf("http://localhost:8080/%s", generatedCode), // create the short URL using the generated code
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
+
 func redirectHandler(w http.ResponseWriter, r *http.Request) { // work is to redirect the user to the original URL based on the code in the path
 	code := r.PathValue("code")
+	url, exists := store.GET(code) // get the original URL from the store based on the code
+	if !exists {
+		http.Error(w, "Short code not found", http.StatusNotFound)
+		return
+	}
+
 	fmt.Printf("Redirecting code: %s\n", code)
-	w.Header().Set("Location", "https://github.com") // wriete the location header to the response, which tells the browser where to redirect to
-	w.WriteHeader(302)                               // write the status code to the response, which tells the browser that the resource has been found and is being redirected
+	http.Redirect(w, r, url, http.StatusFound) // write the status code to the response, which tells the browser that the resource has been found and is being redirected
 }

@@ -4,6 +4,10 @@ import (
 	"net/http"
 )
 
+var store = &URLStore{
+	urls: make(map[string]string),
+}
+
 func main() {
 	//handler: a function that go calls when a request is made to the server
 	// that function takes two parameters: a ResponseWriter and a Request
