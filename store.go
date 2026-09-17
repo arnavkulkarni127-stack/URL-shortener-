@@ -1,32 +1,50 @@
 package main
 
-import "fmt"
+import (
+	"database/sql"
+	"fmt"
+	"strings"
+)
 
 // METHODS for the URLStore struct to read and write to the map of shortened URLs and their corresponding original URLs
-func (store *URLStore) GET(code string) (string, bool) { // to read something from the map, we need to lock it first, and then unlock it after we're done reading
 
-	url, ok := store.urls[code]
-	return url, ok
-}
-func (store *URLStore) SET(code, url string) { // to write something to the map, we need to lock it first, and then unlock it after we're done writing
+func (store *URLStore) GET(code string) (string, bool) { // get the long url from database
 
-	store.urls[code] = url
+	var OriginalURL string
+	err := store.db.QueryRow("SELECT original_url FROM urls WHERE code = $1", code).Scan(&OriginalURL) // query the database for the original URL corresponding to the given code
+
+	if err == sql.ErrNoRows {
+		return "", false
+	}
+	if err != nil {
+		fmt.Println("Error retrieving original URL:", err)
+		return "", false
+	}
+
+	return OriginalURL, true
 }
 
 // Method to check if a code exists in the map
 func (store *URLStore) ShortenRequest(ogurl string) (string, error) { // to check if a code exists in the map, we need to lock it first, and then unlock it after we're done checking
-	maxRetries := 5
+	maxRetries := 10
 	for i := 0; i < maxRetries; i++ {
-		code := generateRandomshortCode(6)          // generate a random short code of length 6
-		if _, exists := store.urls[code]; !exists { // check if the code already exists in the map
-			store.urls[code] = ogurl // if it doesn't exist, add it to the map
+		code := generateRandomshortCode(6)                                                           // generate a random short code of length 6
+		_, err := store.db.Exec("INSERT INTO urls(code, original_url) VALUES ($1, $2)", code, ogurl) // insert query executed
+
+		if err == nil {
 			return code, nil
 		}
+		if strings.Contains(err.Error(), "duplicate key") {
+			continue
+		}
+
+		return "", err
 	}
 
 	return "", fmt.Errorf("failed to generate a unique code after %d attempts", maxRetries)
 }
-func (store *URLStore) StoreSize() int {
 
-	return len(store.urls)
-}
+// func (store *URLStore) StoreSize() int {
+
+// 	return len(store.urls)
+// }
