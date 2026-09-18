@@ -5,10 +5,10 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/handler"
+	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/store"
 	_ "github.com/lib/pq"
 )
-
-var store *URLStore
 
 func main() {
 	conStr := "postgres://postgres:1207@localhost:5432/urlshortener?sslmode=disable" // a connection string to connect to the database
@@ -26,12 +26,17 @@ func main() {
 
 	defer db.Close()                         // close the pool when the main function exits
 	log.Println("Connected to the database") // log that the connection was successful
-	store = &URLStore{db: db}                // initialize the store with the database connection
+
+	// initialize the store with the database connection
+	s := store.NewURLStore(db) // Create store
+	h := handler.NewHandler(s) // Inject store into handler
 
 	//handler: a function that go calls when a request is made to the server
 	// that function takes two parameters: a ResponseWriter and a Request
-	http.HandleFunc("POST /shorten", shortenHandler) // route for shortening URLs
-	http.HandleFunc("GET /{code}", redirectHandler)  // route for redirecting to the original URL || also {code} is a wildcard that will hold annything
+	http.HandleFunc("POST /api/v1/shorten", h.ShortenHandler)         // route for shortening URLs
+	http.HandleFunc("GET /api/v1/redirect/{code}", h.RedirectHandler) // route for redirecting to the original URL || also {code} is a wildcard that will hold annything
+
+	// API: set of endpoints(routes) your server exposesto the client to use
 
 	http.ListenAndServe(":8080", nil)
 }

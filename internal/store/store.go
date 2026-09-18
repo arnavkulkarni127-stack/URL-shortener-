@@ -1,12 +1,20 @@
-package main
+package store
 
 import (
 	"database/sql"
 	"fmt"
 	"strings"
+
+	"github.com/arnavkulkarni127-stack/URL-shortener-/pkg/codegen"
 )
 
-// METHODS for the URLStore struct to read and write to the map of shortened URLs and their corresponding original URLs
+type URLStore struct {
+	db *sql.DB
+}
+
+func NewURLStore(db *sql.DB) *URLStore {
+	return &URLStore{db: db}
+}
 
 func (store *URLStore) GET(code string) (string, bool) { // get the long url from database
 
@@ -24,11 +32,10 @@ func (store *URLStore) GET(code string) (string, bool) { // get the long url fro
 	return OriginalURL, true
 }
 
-// Method to check if a code exists in the map
-func (store *URLStore) ShortenRequest(ogurl string) (string, error) { // to check if a code exists in the map, we need to lock it first, and then unlock it after we're done checking
+func (store *URLStore) ShortenRequest(ogurl string) (string, error) {
 	maxRetries := 10
 	for i := 0; i < maxRetries; i++ {
-		code := generateRandomshortCode(6)                                                           // generate a random short code of length 6
+		code := codegen.GenerateRandomShortCode(6)                                                   // generate a random short code of length 6
 		_, err := store.db.Exec("INSERT INTO urls(code, original_url) VALUES ($1, $2)", code, ogurl) // insert query executed
 
 		if err == nil {
@@ -43,8 +50,3 @@ func (store *URLStore) ShortenRequest(ogurl string) (string, error) { // to chec
 
 	return "", fmt.Errorf("failed to generate a unique code after %d attempts", maxRetries)
 }
-
-// func (store *URLStore) StoreSize() int {
-
-// 	return len(store.urls)
-// }
