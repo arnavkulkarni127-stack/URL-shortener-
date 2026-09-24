@@ -32,7 +32,7 @@ func (store *URLStore) GET(code string) (string, bool) { // get the long url fro
 	return OriginalURL, true
 }
 
-func (store *URLStore) ShortenRequest(ogurl string) (string, error) {
+func (store *URLStore) ShortenRequest(userID int, ogurl string) (string, error) {
 	maxRetries := 10
 	for i := 0; i < maxRetries; i++ {
 		code := codegen.GenerateRandomShortCode(6)                                                   // generate a random short code of length 6
@@ -49,4 +49,11 @@ func (store *URLStore) ShortenRequest(ogurl string) (string, error) {
 	}
 
 	return "", fmt.Errorf("failed to generate a unique code after %d attempts", maxRetries)
+}
+func (store *URLStore) CreateUser(email, passwordHash string) (int, error) {
+	_, err := store.db.Exec("INSERT INTO users (email, passwordHash) VALUES ($1, $2)", email, passwordHash)
+	if err != nil {
+		return 0, err
+	}
+
 }
