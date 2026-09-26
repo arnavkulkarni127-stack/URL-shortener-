@@ -20,7 +20,7 @@ func WriteLogs(method, path string, status int, duration time.Duration) {
 		Method:     method,
 		Path:       path,
 		Status:     status,
-		DurationMS: int64(duration),
+		DurationMS: duration.Milliseconds(),
 	}
 	jsonData, err := json.Marshal(entry) // returns []byte containing data
 	if err != nil {

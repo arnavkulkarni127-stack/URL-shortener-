@@ -9,3 +9,8 @@ type ShortenResponse struct {
 	ShortCode string `json:"short_code"`
 	ShortURL  string `json:"short_url"`
 }
+type CreateUser struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+	Name     string `json:"name"`
+}
