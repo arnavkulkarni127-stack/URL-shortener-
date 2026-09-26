@@ -12,7 +12,7 @@ import (
 
 func main() {
 	secret := "my-super-secret-key"
-	conStr := "postgres://postgres:1207@localhost:5432/url_shortener?sslmode=disable" // a connection string to connect to the database
+	conStr := "postgres://postgres:1207@localhost:5432/urlshortener?sslmode=disable" // a connection string to connect to the database
 
 	db, err := sql.Open("postgres", conStr) // open a connection pool to the database
 	if err != nil {

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -152,18 +153,39 @@ func (h Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		WriteLogs(r.Method, r.RequestURI, statusCode, time.Since(start))
 		return
 	}
+	log.Printf("LoginHandler: email=%q", userCreated.Email)
 	//	get the user by email
-	_, passHash, err := h.store.GetUserByEmail(userCreated.Email)
+	userID, passHash, err := h.store.GetUserByEmail(userCreated.Email)
 	if err != nil {
 		statusCode = http.StatusUnauthorized
 		WriteErrors(w, "Invalid Credentials", statusCode)
 		WriteLogs(r.Method, r.RequestURI, statusCode, time.Since(start))
+		return
 	}
 	// 	verify the password
 	if !auth.VerifyPassword(passHash, userCreated.Password) {
 		statusCode = http.StatusUnauthorized
 		WriteErrors(w, "Invalid credentials", statusCode)
 		WriteLogs(r.Method, r.RequestURI, statusCode, time.Since(start))
+		return
 	}
+	tokenString, erro := auth.GenerateJWT(userID, h.secret)
+	if erro != nil {
+		statusCode = http.StatusInternalServerError
+		WriteErrors(w, "Failed to generate token", statusCode)
+		WriteLogs(r.Method, r.RequestURI, statusCode, time.Since(start))
+		return
+	}
+	statusCode = http.StatusCreated
+	response := struct {
+		AccessToken string `json:"access_token"`
+	}{
+		AccessToken: tokenString,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(response)
+	WriteLogs(r.Method, r.RequestURI, statusCode, time.Since(start))
 
 }

@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/arnavkulkarni127-stack/URL-shortener-/pkg/codegen"
@@ -63,8 +64,9 @@ func (store *URLStore) GetUserByEmail(email string) (int, string, error) {
 	var userID int
 	var password string
 
-	err := store.db.QueryRow("SELECT id,password_hash FROM users WHERE email = &1", email).Scan(&userID, &password)
+	err := store.db.QueryRow("SELECT id,password_hash FROM users WHERE email = $1", email).Scan(&userID, &password)
 	if err != nil {
+		log.Print(err)
 		return 0, "", err
 	}
 	return userID, password, nil
