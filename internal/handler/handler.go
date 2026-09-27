@@ -137,7 +137,7 @@ func (h *Handler) SignUpHandler(w http.ResponseWriter, r *http.Request) {
 	WriteLogs(r.Method, r.RequestURI, statusCode, time.Since(start))
 }
 
-func (h Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	var userCreated struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
