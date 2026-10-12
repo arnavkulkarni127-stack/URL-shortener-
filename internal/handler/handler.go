@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/auth"
@@ -31,8 +32,18 @@ func (h *Handler) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 	var statusCode int
 	var req models.ShortenRequest
 	//var userCreated models.CreateUser
+	userIdSt := r.Header.Get("X-User-ID") // getting the userID from request
+	if userIdSt == "" {
+		WriteErrors(w, "missing userID", http.StatusUnauthorized)
+		return
+	}
+	userId, err := strconv.Atoi(userIdSt)
+	if err != nil {
+		WriteErrors(w, "invalid userId", http.StatusBadRequest)
+		return
+	}
 
-	err := json.NewDecoder(r.Body).Decode(&req) // decode the request body into the request struct
+	err = json.NewDecoder(r.Body).Decode(&req) // decode the request body into the request struct
 	if err != nil {
 		statusCode = http.StatusBadRequest
 		WriteErrors(w, "Invalid request body", statusCode)
@@ -47,7 +58,7 @@ func (h *Handler) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 		WriteLogs(r.Method, r.RequestURI, statusCode, time.Since(start))
 		return
 	}
-	generatedCode, err := h.store.ShortenRequest(1, req.URL) // generate a unique short code for the URL
+	generatedCode, err := h.store.ShortenRequest(userId, req.URL) // generate a unique short code for the URL
 	if err != nil {
 		statusCode = http.StatusInternalServerError
 		fmt.Println("ShortenRequest error:", err)
@@ -188,4 +199,41 @@ func (h *Handler) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 	WriteLogs(r.Method, r.RequestURI, statusCode, time.Since(start))
 
+}
+func (h *Handler) GetLinksHandler(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	userIdSt := r.Header.Get("X-User-ID") // getting the userID from request
+	if userIdSt == "" {
+		WriteErrors(w, "missing userID", http.StatusUnauthorized)
+		return
+	}
+	userId, err := strconv.Atoi(userIdSt)
+	if err != nil {
+		WriteErrors(w, "invalid userId", http.StatusBadRequest)
+		return
+	}
+	limit := r.URL.Query().Get("limit") //getting the limti and offset from the url request
+	offset := r.URL.Query().Get("offset")
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil {
+		WriteErrors(w, "Limit not valid", http.StatusBadRequest)
+		return
+	}
+
+	offsetInt, err := strconv.Atoi(offset)
+	if err != nil {
+		WriteErrors(w, "offset not valid", http.StatusBadRequest)
+		return
+	}
+
+	links, err := h.store.GetUserLinks(userId, limitInt, offsetInt)
+	if err != nil {
+		WriteErrors(w, "failed to fetch links", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(links)
+	WriteLogs(r.Method, r.RequestURI, http.StatusOK, time.Since(start))
 }

@@ -6,6 +6,8 @@ import (
 	"log"
 	"strings"
 
+	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/models"
+
 	"github.com/arnavkulkarni127-stack/URL-shortener-/pkg/codegen"
 )
 
@@ -71,4 +73,27 @@ func (store *URLStore) GetUserByEmail(email string) (int, string, error) {
 	}
 	return userID, password, nil
 
+}
+
+func (store *URLStore) GetUserLinks(userID int, limit int, offset int) ([]models.URLLinks, error) { // brings the links of the user from DB
+	rows, err := store.db.Query("SELECT code, original_url, created_at FROM urls WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2::INTEGER OFFSET $3::INTEGER", userID, limit, offset) //fetch the three columns from urls table where the user_id is 'x'; limit is the no. of rows to display add offset is the no.  to skip
+	if err != nil {
+		fmt.Println("Query error:", err)
+		return nil, err
+	}
+	defer rows.Close()
+	var links []models.URLLinks
+	for rows.Next() {
+		var link models.URLLinks
+		err := rows.Scan(&link.ShortCode, &link.OriginalURL, &link.CreatedAt)
+		if err != nil {
+			fmt.Println("Scan error:", err)
+			return nil, err
+		}
+		links = append(links, link)
+	}
+	if err := rows.Err(); err != nil { // check if there was an error during iteration
+		return nil, err
+	}
+	return links, nil
 }

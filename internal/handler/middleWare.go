@@ -8,7 +8,7 @@ import (
 	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/auth"
 )
 
-func (h *Handler) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func (h *Handler) AuthMiddleware(next http.HandlerFunc) http.HandlerFunc { //take the next hanndler function and wraps it into a middleware 
 	return func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization") // get the authorization header from req
 		if authHeader == "" {

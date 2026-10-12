@@ -38,6 +38,7 @@ func main() {
 	http.HandleFunc("GET /api/v1/redirect/{code}", h.RedirectHandler)           // route for redirecting to the original URL || also {code} is a wildcard that will hold annything
 	http.HandleFunc("POST /api/v1/auth/signup", h.SignUpHandler)
 	http.HandleFunc("POST /api/v1/auth/login", h.LoginHandler)
+	http.HandleFunc("GET /api/v1/links", h.AuthMiddleware(h.GetLinksHandler))
 	// API: set of endpoints(routes) your server exposes to the client to use
 
 	http.ListenAndServe(":8080", nil)

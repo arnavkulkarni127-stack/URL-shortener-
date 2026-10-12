@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type ShortenRequest struct {
 	URL string `json:"url"` // tellsw the decoder to look for a field called url in the request body and store it in the URL field of the request struct
 
@@ -13,4 +15,9 @@ type CreateUser struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Name     string `json:"name"`
+}
+type URLLinks struct {
+	ShortCode   string    `json:"shortlink"`
+	OriginalURL string    `json: "original_url"`
+	CreatedAt   time.Time `json: "created_at"`
 }
