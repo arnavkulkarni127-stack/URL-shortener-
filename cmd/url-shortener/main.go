@@ -39,6 +39,7 @@ func main() {
 	http.HandleFunc("POST /api/v1/auth/signup", h.SignUpHandler)
 	http.HandleFunc("POST /api/v1/auth/login", h.LoginHandler)
 	http.HandleFunc("GET /api/v1/links", h.AuthMiddleware(h.GetLinksHandler))
+	http.HandleFunc("DELETE /api/v1/links/{code}", h.AuthMiddleware(h.DeleteUserLinks))
 	// API: set of endpoints(routes) your server exposes to the client to use
 
 	http.ListenAndServe(":8080", nil)

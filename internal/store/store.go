@@ -97,3 +97,17 @@ func (store *URLStore) GetUserLinks(userID int, limit int, offset int) ([]models
 	}
 	return links, nil
 }
+func (store *URLStore) DeleteUserLink(userId int, shortCode string) error {
+	result, err := store.db.Exec("DELETE FROM urls WHERE user_id = $1 AND code = $2", userId, shortCode)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}

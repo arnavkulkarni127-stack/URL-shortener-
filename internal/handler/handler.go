@@ -3,6 +3,7 @@ package handler
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -236,4 +237,33 @@ func (h *Handler) GetLinksHandler(w http.ResponseWriter, r *http.Request) {
 
 	json.NewEncoder(w).Encode(links)
 	WriteLogs(r.Method, r.RequestURI, http.StatusOK, time.Since(start))
+}
+func (h *Handler) DeleteUserLinks(w http.ResponseWriter, r *http.Request) {
+
+	userIdStr := r.Header.Get("X-User-ID") // userid is sent by the middleware as string
+	if userIdStr == "" {
+		WriteErrors(w, "Missing UserId", http.StatusUnauthorized)
+		return
+	}
+	userId, err := strconv.Atoi(userIdStr)
+	if err != nil {
+		WriteErrors(w, "Invalid userId", http.StatusUnauthorized)
+		return
+	}
+	shortCode := r.PathValue("code")
+	if shortCode == "" {
+		WriteErrors(w, "Missing code", http.StatusBadRequest)
+		return
+	}
+	err = h.store.DeleteUserLink(userId, shortCode)
+	if errors.Is(err, sql.ErrNoRows) { //safe comparison as it unwraps the err and compares with errnorows
+		WriteErrors(w, "Link not found", http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		WriteErrors(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent) // 204 = nothing to return
 }
