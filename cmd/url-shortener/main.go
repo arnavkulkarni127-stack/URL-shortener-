@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"log"
 	"net/http"
@@ -8,12 +9,19 @@ import (
 	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/handler"
 	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/store"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
 	secret := "my-super-secret-key"
 	conStr := "postgres://postgres:1207@localhost:5432/urlshortener?sslmode=disable" // a connection string to connect to the database
-
+	rdb := redis.NewClient(&redis.Options{
+		Addr: "localhost:6379",
+	})
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		log.Fatal(err)
+	}
+	log.Println("connected to redis")
 	db, err := sql.Open("postgres", conStr) // open a connection pool to the database
 	if err != nil {
 		log.Fatal(err)
@@ -29,7 +37,7 @@ func main() {
 	log.Println("Connected to the database") // log that the connection was successful
 
 	// initialize the store with the database connection
-	s := store.NewURLStore(db)         // Create store
+	s := store.NewURLStore(db, rdb)    // Create store
 	h := handler.NewHandler(s, secret) // Inject store into handler
 
 	//handler: a function that go calls when a request is made to the server

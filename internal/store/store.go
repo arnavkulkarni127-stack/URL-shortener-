@@ -7,16 +7,18 @@ import (
 	"strings"
 
 	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/models"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/arnavkulkarni127-stack/URL-shortener-/pkg/codegen"
 )
 
 type URLStore struct {
-	db *sql.DB
+	db  *sql.DB
+	rdb *redis.Client
 }
 
-func NewURLStore(db *sql.DB) *URLStore {
-	return &URLStore{db: db}
+func NewURLStore(db *sql.DB, rdb *redis.Client) *URLStore {
+	return &URLStore{db: db, rdb: rdb}
 }
 
 func (store *URLStore) GET(code string) (string, bool) { // get the long url from database
