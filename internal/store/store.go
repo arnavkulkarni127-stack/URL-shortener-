@@ -1,10 +1,12 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/models"
 	"github.com/redis/go-redis/v9"
@@ -17,24 +19,19 @@ type URLStore struct {
 	rdb *redis.Client
 }
 
+func cacheKey(code string) string {
+	return "url:" + code
+}
 func NewURLStore(db *sql.DB, rdb *redis.Client) *URLStore {
 	return &URLStore{db: db, rdb: rdb}
 }
 
-func (store *URLStore) GET(code string) (string, bool) { // get the long url from database
+func (store *URLStore) getFromDb(ctx context.Context, code string) (string, error) { // get the long url from database
 
 	var OriginalURL string
-	err := store.db.QueryRow("SELECT original_url FROM urls WHERE code = $1", code).Scan(&OriginalURL) // query the database for the original URL corresponding to the given code
+	err := store.db.QueryRowContext(ctx, "SELECT original_url FROM urls WHERE code = $1", code).Scan(&OriginalURL)
 
-	if err == sql.ErrNoRows {
-		return "", false
-	}
-	if err != nil {
-		fmt.Println("Error retrieving original URL:", err)
-		return "", false
-	}
-
-	return OriginalURL, true
+	return OriginalURL, err
 }
 
 func (store *URLStore) ShortenRequest(userID int, ogurl string) (string, error) {
@@ -99,17 +96,40 @@ func (store *URLStore) GetUserLinks(userID int, limit int, offset int) ([]models
 	}
 	return links, nil
 }
-func (store *URLStore) DeleteUserLink(userId int, shortCode string) error {
+func (store *URLStore) DeleteUserLink(ctx context.Context, userId int, shortCode string) error {
 	result, err := store.db.Exec("DELETE FROM urls WHERE user_id = $1 AND code = $2", userId, shortCode)
 	if err != nil {
 		return err
 	}
 	rows, err := result.RowsAffected()
-	if rows == 0 {
+	if rows == 0 { // doesnt exist
 		return sql.ErrNoRows
 	}
-	if err != nil {
+	if err != nil { // 	other error
 		return err
 	}
+	err = store.rdb.Del(ctx, cacheKey(shortCode)).Err()
+	if err != nil {
+		log.Printf("Failed to delete the link from cache for the %s", shortCode)
+	}
 	return nil
+}
+func (store *URLStore) GET(ctx context.Context, code string) (string, bool) {
+	key := cacheKey(code)
+	val, err := store.rdb.Get(ctx, key).Result() // sends the commannds to the redis and waits for the reply. then parses the bytecode into a response recieved
+	if err == nil {                              //		got it in redis so no error and we return thhe originl value bacck
+		return val, true
+	}
+	if err != redis.Nil { // redis error
+		log.Print("redis error: ", err)
+	}
+	var original string
+	original, err = store.getFromDb(ctx, code)
+	if err != nil { // 		didnt find the link in postgres
+		return "", false
+	}
+	store.rdb.Set(ctx, key, original, 24*time.Hour) // 		found the link in postgres, so store it in the redis with TTL = 24 hrs
+
+	return original, true
+
 }

@@ -14,11 +14,13 @@ import (
 	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/models"
 	"github.com/arnavkulkarni127-stack/URL-shortener-/internal/store"
 	"github.com/arnavkulkarni127-stack/URL-shortener-/pkg/validation"
+	"github.com/redis/go-redis/v9"
 )
 
 type URLStore struct {
 	// mutex to protect the map from concurrent access (like a lock)
-	Db *sql.DB
+	Db  *sql.DB
+	rdb *redis.Client
 }
 type Handler struct {
 	store  *store.URLStore
@@ -82,8 +84,9 @@ func (h *Handler) ShortenHandler(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RedirectHandler(w http.ResponseWriter, r *http.Request) { // work is to redirect the user to the original URL based on the code in the path
 	start := time.Now()
 	var statusCode int
+
 	code := r.PathValue("code")
-	url, exists := h.store.GET(code) // get the original URL from the store based on the code
+	url, exists := h.store.GET(r.Context(), code) // get the original URL from the store based on the code
 	if !exists {
 		statusCode := http.StatusNotFound
 		WriteErrors(w, "Short code not found", statusCode)
@@ -255,7 +258,7 @@ func (h *Handler) DeleteUserLinks(w http.ResponseWriter, r *http.Request) {
 		WriteErrors(w, "Missing code", http.StatusBadRequest)
 		return
 	}
-	err = h.store.DeleteUserLink(userId, shortCode)
+	err = h.store.DeleteUserLink(r.Context(), userId, shortCode)
 	if errors.Is(err, sql.ErrNoRows) { //safe comparison as it unwraps the err and compares with errnorows
 		WriteErrors(w, "Link not found", http.StatusNotFound)
 		return
